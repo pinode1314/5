@@ -59,6 +59,63 @@ bbr="Openvz/Lxc"
 fi
 hostname=$(hostname)
 
+if [ ! -f sbyg_update ]; then
+green "首次安装Sing-box-yg脚本必要的依赖……"
+if command -v apk >/dev/null 2>&1; then
+apk update
+apk add bash libc6-compat jq openssl procps busybox-extras iproute2 iputils coreutils expect git socat iptables grep tar tzdata util-linux
+apk add virt-what
+else
+if [[ $release = Centos && ${vsid} =~ 8 ]]; then
+cd /etc/yum.repos.d/ && mkdir backup && mv *repo backup/ 
+curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-8.repo
+sed -i -e "s|mirrors.cloud.aliyuncs.com|mirrors.aliyun.com|g " /etc/yum.repos.d/CentOS-*
+sed -i -e "s|releasever|releasever-stream|g" /etc/yum.repos.d/CentOS-*
+yum clean all && yum makecache
+cd
+fi
+if [ -x "$(command -v apt-get)" ]; then
+apt update -y
+apt install jq cron socat busybox iptables-persistent coreutils util-linux -y
+elif [ -x "$(command -v yum)" ]; then
+yum update -y && yum install epel-release -y
+yum install jq socat busybox coreutils util-linux -y
+elif [ -x "$(command -v dnf)" ]; then
+dnf update -y
+dnf install jq socat busybox coreutils util-linux -y
+fi
+if [ -x "$(command -v yum)" ] || [ -x "$(command -v dnf)" ]; then
+if [ -x "$(command -v yum)" ]; then
+yum install -y cronie iptables-services
+elif [ -x "$(command -v dnf)" ]; then
+dnf install -y cronie iptables-services
+fi
+systemctl enable iptables >/dev/null 2>&1
+systemctl start iptables >/dev/null 2>&1
+fi
+if [[ -z $vi ]]; then
+apt install iputils-ping iproute2 systemctl -y
+fi
+
+packages=("curl" "openssl" "iptables" "tar" "expect" "wget" "xxd" "python3" "qrencode" "git")
+inspackages=("curl" "openssl" "iptables" "tar" "expect" "wget" "xxd" "python3" "qrencode" "git")
+for i in "${!packages[@]}"; do
+package="${packages[$i]}"
+inspackage="${inspackages[$i]}"
+if ! command -v "$package" &> /dev/null; then
+if [ -x "$(command -v apt-get)" ]; then
+apt-get install -y "$inspackage"
+elif [ -x "$(command -v yum)" ]; then
+yum install -y "$inspackage"
+elif [ -x "$(command -v dnf)" ]; then
+dnf install -y "$inspackage"
+fi
+fi
+done
+fi
+touch sbyg_update
+fi
+
 if [[ $vi = openvz ]]; then
 TUN=$(cat /dev/net/tun 2>&1)
 if [[ ! $TUN =~ 'in bad state' ]] && [[ ! $TUN =~ '处于错误状态' ]] && [[ ! $TUN =~ 'Die Dateizugriffsnummer ist in schlechter Verfassung' ]]; then 
