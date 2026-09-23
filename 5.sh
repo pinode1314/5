@@ -11,7 +11,8 @@ green(){ echo -e "\033[32m\033[01m$1\033[0m";}
 yellow(){ echo -e "\033[33m\033[01m$1\033[0m";}
 blue(){ echo -e "\033[36m\033[01m$1\033[0m";}
 white(){ echo -e "\033[37m\033[01m$1\033[0m";}
-readp(){ read -p "$(yellow "$1")" $2;} [[$EUID -ne 0 ]] && yellow "请以root模式运行脚本" && exit
+readp(){ read -p "$(yellow "$1")" $2;}
+[[ $EUID -ne 0 ]] && yellow "请以root模式运行脚本" && exit
 stty erase $'\b' 2>/dev/null || stty erase '^H' 2>/dev/null
 #[[ -e /etc/hosts ]] && grep -qE '^ *172.65.251.78 gitlab.com' /etc/hosts || echo -e '\n172.65.251.78 gitlab.com' >> /etc/hosts
 if [[ -f /etc/redhat-release ]]; then
@@ -34,7 +35,7 @@ else
 red "脚本不支持当前的系统，请选择使用Ubuntu,Debian,Centos系统。" && exit
 fi
 export sbfiles="/etc/s-box/sb10.json /etc/s-box/sb11.json /etc/s-box/sb.json"
-export sbnh=$(/etc/s-box/sing-box version 2>/dev/null \vert{} awk '/version/{print$NF}' 2>/dev/null | cut -d '.' -f 1,2)
+export sbnh=$(/etc/s-box/sing-box version 2>/dev/null | awk '/version/{print $NF}' 2>/dev/null | cut -d '.' -f 1,2)
 vsid=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
 op=$(cat /etc/redhat-release 2>/dev/null || cat /etc/os-release 2>/dev/null | grep -i pretty_name | cut -d \" -f2)
 #if [[ $(echo "$op" | grep -i -E "arch|alpine") ]]; then
@@ -42,7 +43,7 @@ if [[ $(echo "$op" | grep -i -E "arch") ]]; then
 red "脚本不支持当前的 $op 系统，请选择使用Ubuntu,Debian,Centos系统。" && exit
 fi
 version=$(uname -r | cut -d "-" -f1)
-[[ -z $(systemd-detect-virt 2>/dev/null) ]] && vi=$(virt-what 2>/dev/null) \vert{}\vert{} vi=$(systemd-detect-virt 2>/dev/null)
+[[ -z $(systemd-detect-virt 2>/dev/null) ]] && vi=$(virt-what 2>/dev/null) || vi=$(systemd-detect-virt 2>/dev/null)
 case $(uname -m) in
 armv7l) cpu=armv7;;
 aarch64) cpu=arm64;;
@@ -103,7 +104,7 @@ endip="162.159.192.1"
 fi
 }
 warpcheck
-if [[ ! $wgcfv4 =~ on\vert{}plus && !$wgcfv6 =~ on|plus ]]; then
+if [[ ! $wgcfv4 =~ on|plus && ! $wgcfv6 =~ on|plus ]]; then
 v4orv6
 else
 systemctl stop wg-quick@wgcf >/dev/null 2>&1
@@ -141,7 +142,7 @@ green "执行开放端口，关闭防火墙完毕"
 openyn(){
 red "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 readp "是否开放端口，关闭防火墙？\n1、是，执行 (回车默认)\n2、否，跳过！自行处理\n请选择【1-2】：" action
-if [[ -z $action ]] \vert{}\vert{} [[ "$action" = "1" ]]; then
+if [[ -z $action ]] || [[ "$action" = "1" ]]; then
 close
 elif [[ "$action" = "2" ]]; then
 echo
@@ -156,7 +157,7 @@ green "使用哪个内核版本？"
 yellow "1：使用目前最新正式版内核 (回车默认)"
 yellow "2：使用之前1.10.7正式版内核 (支持geosite分流、IP优选级切换，无Anytls协议)"
 readp "请选择【1-2】：" menu
-if [ -z "$menu" ] \vert{}\vert{} [ "$menu" = "1" ] ; then
+if [ -z "$menu" ] || [ "$menu" = "1" ] ; then
 sbcore=$(curl -Ls https://github.com/SagerNet/sing-box/releases/latest | grep -oP 'tag/v\K[0-9.]+' | head -n 1)
 else
 sbcore='1.10.7'
@@ -170,8 +171,8 @@ rm -rf /etc/s-box/{sing-box.tar.gz,$sbname}
 if [[ -f '/etc/s-box/sing-box' ]]; then
 chown root:root /etc/s-box/sing-box
 chmod +x /etc/s-box/sing-box
-blue "成功安装 Sing-box 内核版本：$(/etc/s-box/sing-box version \vert{} awk '/version/{print$NF}')"
-sbnh=$(/etc/s-box/sing-box version 2>/dev/null \vert{} awk '/version/{print$NF}' 2>/dev/null | cut -d '.' -f 1,2)
+blue "成功安装 Sing-box 内核版本：$(/etc/s-box/sing-box version | awk '/version/{print $NF}')"
+sbnh=$(/etc/s-box/sing-box version 2>/dev/null | awk '/version/{print $NF}' 2>/dev/null | cut -d '.' -f 1,2)
 else
 red "下载 Sing-box 内核不完整，安装失败，请再运行安装一次" && exit
 fi
@@ -232,7 +233,7 @@ green "是否使用 $(cat /root/ygkkkca/ca.log) 域名IP证书？"
 yellow "1：否！使用自签的证书 (回车默认)"
 yellow "2：是！使用 $(cat /root/ygkkkca/ca.log) 域名IP证书"
 readp "请选择【1-2】：" menu
-if [ -z "$menu" ] \vert{}\vert{} [ "$menu" = "1" ] ; then
+if [ -z "$menu" ] || [ "$menu" = "1" ] ; then
 zqzs
 else
 ymzs
@@ -242,7 +243,7 @@ green "是否申请一个Acme域名IP证书？"
 yellow "1：否！继续使用自签的证书 (回车默认)"
 yellow "2：是！使用Acme-yg脚本申请Acme证书 (支持80端口域名IP证书模式与Dns API域名模式)"
 readp "请选择【1-2】：" menu
-if [ -z "$menu" ] \vert{}\vert{} [ "$menu" = "1" ] ; then
+if [ -z "$menu" ] || [ "$menu" = "1" ] ; then
 zqzs
 else
 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/acme-yg/main/acme.sh)
@@ -259,14 +260,14 @@ fi
 chooseport(){
 if [[ -z $port ]]; then
 port=$(shuf -i 10000-65535 -n 1)
-until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") && -z $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]] 
+until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") && -z $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]] 
 do
-[[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") \vert{}\vert{} -n $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]] && yellow "\n端口被占用，请重新输入端口" && readp "自定义端口:" port
+[[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") || -n $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]] && yellow "\n端口被占用，请重新输入端口" && readp "自定义端口:" port
 done
 else
-until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") && -z $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]]
+until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") && -z $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]
 do
-[[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") \vert{}\vert{} -n $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]] && yellow "\n端口被占用，请重新输入端口" && readp "自定义端口:" port
+[[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") || -n $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]] && yellow "\n端口被占用，请重新输入端口" && readp "自定义端口:" port
 done
 fi
 blue "确认的端口：$port" && sleep 2
@@ -304,14 +305,14 @@ green "三、设置各个协议端口"
 yellow "1：自动生成每个协议的随机端口 (10000-65535范围内)，回车默认。请确保VPS后台已开放所有端口"
 yellow "2：自定义每个协议端口。请确保VPS后台已开放指定的端口"
 readp "请输入【1-2】：" port
-if [ -z "$port" ] \vert{}\vert{} [ "$port" = "1" ] ; then
+if [ -z "$port" ] || [ "$port" = "1" ] ; then
 ports=()
 for i in {1..5}; do
 while true; do
 port=$(shuf -i 10000-65535 -n 1)
 if ! [[ " ${ports[@]} " =~ " $port " ]] && \
-[[ -z $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]] && \
-[[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port") ]]; then
+[[ -z $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]] && \
+[[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]; then
 ports+=($port)
 break
 fi
@@ -327,15 +328,15 @@ numbers=("2053" "2083" "2087" "2096" "8443")
 else
 numbers=("8080" "8880" "2052" "2082" "2086" "2095")
 fi
-port_vm_ws=${numbers[$RANDOM \%${#numbers[@]}]}
-until [[ -z $(ss -tunlp | grep -w tcp | awk '{print $5}' \vert{} sed 's/.*://g' \vert{} grep -w "$port_vm_ws") ]]
+port_vm_ws=${numbers[$RANDOM % ${#numbers[@]}]}
+until [[ -z $(ss -tunlp | grep -w tcp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port_vm_ws") ]]
 do
 if [[ $tlsyn == "true" ]]; then
 numbers=("2053" "2083" "2087" "2096" "8443")
 else
 numbers=("8080" "8880" "2052" "2082" "2086" "2095")
 fi
-port_vm_ws=${numbers[$RANDOM \%${#numbers[@]}]}
+port_vm_ws=${numbers[$RANDOM % ${#numbers[@]}]}
 done
 echo
 blue "根据Vmess-ws协议是否启用TLS，随机指定支持CDN优选IP的标准端口：$port_vm_ws"
